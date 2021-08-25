@@ -16,10 +16,12 @@ func initConsumer(c *cli.Context) error {
 	newKafkaClient := &kafkaClient{
 		serverUrl: c.String(flagServerUrl),
 		topics:    c.StringSlice(flagTopics),
+		topic:     c.String(flagTopic),
 		offset:    c.String(flagOffset),
 		timeout:   c.Duration(flagTimeout),
 		delay:     c.Duration(flagDelay),
 		skipDelay: c.Bool(flagSkipDelay),
+		groupID:   c.String(flagGroupID),
 	}
 	if err := newKafkaClient.consumer(); err != nil {
 		return err
@@ -33,8 +35,9 @@ func (client *kafkaClient) consumer() error {
 			"bootstrap.servers":     client.serverUrl,
 			"broker.address.family": "v4",
 			"session.timeout.ms":    6000,
+			"queued.min.messages":   5,
 			"auto.offset.reset":     client.offset,
-			"group.id":              "test",
+			"group.id":              client.groupID,
 		},
 	)
 
@@ -42,9 +45,9 @@ func (client *kafkaClient) consumer() error {
 		return fmt.Errorf("failed to create consumer: %s\n", err)
 	}
 
-	log.Printf("Created Consumer %v\n", kafkaConsumer)
+	log.Printf("Created Consumer: %v\n", kafkaConsumer)
 
-	if err = kafkaConsumer.SubscribeTopics(client.topics, nil); err != nil {
+	if err = kafkaConsumer.Subscribe(client.topic, nil); err != nil {
 		return err
 	}
 
@@ -58,6 +61,10 @@ func (client *kafkaClient) consumer() error {
 			log.Printf("Caught signal %v: terminating\n", sig)
 			run = false
 		default:
+
+			if !client.skipDelay {
+				time.Sleep(client.delay)
+			}
 
 			ev := kafkaConsumer.Poll(100)
 			if ev == nil {
@@ -78,10 +85,6 @@ func (client *kafkaClient) consumer() error {
 			default:
 				log.Printf("Ignored %v\n", e)
 			}
-		}
-
-		if !client.skipDelay {
-			time.Sleep(client.delay)
 		}
 	}
 

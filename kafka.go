@@ -12,4 +12,5 @@ type kafkaClient struct {
 	timeout   time.Duration
 	delay     time.Duration
 	skipDelay bool
+	groupID   string
 }

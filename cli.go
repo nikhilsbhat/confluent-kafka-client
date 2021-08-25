@@ -14,6 +14,7 @@ const (
 	flagDelay     = "delay"
 	flagSkipDelay = "skip-delay"
 	flagOffset    = "offset"
+	flagGroupID   = "group-id"
 )
 
 func cliApp() *cli.App {
@@ -93,7 +94,20 @@ func cliApp() *cli.App {
 						Name:    flagTopics,
 						Usage:   "lists of topic to which message has to be published",
 						EnvVars: []string{"TOPICS"},
+						Aliases: []string{"ts"},
+					},
+					&cli.StringFlag{
+						Name:    flagTopic,
+						Usage:   "name of topic to which message has to be published",
+						EnvVars: []string{"TOPIC"},
 						Aliases: []string{"t"},
+					},
+					&cli.StringFlag{
+						Name:    flagGroupID,
+						Usage:   "a unique string that identifies the consumer group this consumer belongs to",
+						EnvVars: []string{"GROUP_ID"},
+						Aliases: []string{"g"},
+						Value:   "test-group",
 					},
 					&cli.BoolFlag{
 						Name:    flagSkipDelay,
