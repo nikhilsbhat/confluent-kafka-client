@@ -32,10 +32,12 @@ func (client *kafkaClient) producer() error {
 		return fmt.Errorf("creating producer errored with: %s", err)
 	}
 
+	recordKey := "client_app"
 	timeout := time.After(client.timeout)
 	finish := make(chan bool)
 	count := 1
 	var errors []string
+	var unDeliveredMessages []int
 	go func() {
 		for {
 			select {
@@ -48,7 +50,8 @@ func (client *kafkaClient) producer() error {
 				if err := kafkaProducer.Produce(
 					&kafka.Message{
 						TopicPartition: kafka.TopicPartition{Topic: &client.topic, Partition: kafka.PartitionAny},
-						Value:          getBytes(count),
+						Key:            []byte(recordKey),
+						Value:          getBytes(count, randStringBytes()),
 					},
 					deliveryChan); err != nil {
 				}
@@ -66,7 +69,17 @@ func (client *kafkaClient) producer() error {
 				close(deliveryChan)
 				count++
 			}
-			time.Sleep(client.delay)
+			flushStat := kafkaProducer.Flush(15 * 1000)
+
+			if flushStat != 0 {
+				unDeliveredMessages = append(unDeliveredMessages, flushStat)
+			}
+
+			if count%2 == 0 {
+				time.Sleep(client.delay)
+			} else {
+				time.Sleep(client.delay / 3)
+			}
 		}
 	}()
 
@@ -74,6 +87,9 @@ func (client *kafkaClient) producer() error {
 
 	if len(errors) != 0 {
 		return fmt.Errorf("publishing message to topic %s failed with below errors: %v", client.topic, errors)
+	}
+	if len(unDeliveredMessages) != 0 {
+		return fmt.Errorf("the undeleivered message instances are: %v", unDeliveredMessages)
 	}
 	return nil
 }

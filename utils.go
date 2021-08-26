@@ -1,20 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
+	"encoding/json"
+
+	"github.com/google/uuid"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
+type fakeMessage struct {
+	Message  string `json:"message"`
+	Instance int    `json:"instance"`
 }
 
-func getBytes(index int) []byte {
-	return []byte(fmt.Sprintf("%s_%d", randStringBytes(20), index))
+func randStringBytes() string {
+	uid := uuid.New()
+	return uid.String()
+}
+
+func getBytes(index int, msg string) []byte {
+	data := fakeMessage{Message: msg, Instance: index}
+	message, _ := json.Marshal(&data)
+	return message
 }

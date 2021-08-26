@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -53,6 +54,7 @@ func (client *kafkaClient) consumer() error {
 
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
+
 	run := true
 	var errors []string
 	for run == true {
@@ -66,25 +68,22 @@ func (client *kafkaClient) consumer() error {
 				time.Sleep(client.delay)
 			}
 
-			ev := kafkaConsumer.Poll(100)
-			if ev == nil {
+			msg, err := kafkaConsumer.ReadMessage(100 * time.Millisecond)
+			if err != nil {
+				log.Println(err)
 				continue
 			}
 
-			switch e := ev.(type) {
-			case *kafka.Message:
-				log.Printf("Message on %s: %s", e.TopicPartition, string(e.Value))
-				if e.Headers != nil {
-					log.Printf("%% Headers: %v\n", e.Headers)
-				}
-			case kafka.Error:
-				errors = append(errors, fmt.Sprintf("error: %v: %v\n", e.Code(), e))
-				if e.Code() == kafka.ErrAllBrokersDown {
-					run = false
-				}
-			default:
-				log.Printf("Ignored %v\n", e)
+			recordKey := string(msg.Key)
+			recordValue := msg.Value
+			data := fakeMessage{}
+			err = json.Unmarshal(recordValue, &data)
+			if err != nil {
+				errors = append(errors, fmt.Sprintf("Failed to decode JSON at offset %d: %v", msg.TopicPartition.Offset, err))
+				continue
 			}
+
+			log.Printf("Consumed record with key %s and value %s on %v\n", recordKey, recordValue, msg.TopicPartition)
 		}
 	}
 
