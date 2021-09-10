@@ -9,9 +9,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	producerFlushTimeout = 15 * 1000
+	randomTimeReduce     = 3
+)
+
 func initProducer(c *cli.Context) error {
 	newKafkaClient := &kafkaClient{
-		serverUrl: c.String(flagServerUrl),
+		serverURL: c.String(flagServerURL),
 		topic:     c.String(flagTopic),
 		timeout:   c.Duration(flagTimeout),
 		delay:     c.Duration(flagDelay),
@@ -25,7 +30,7 @@ func initProducer(c *cli.Context) error {
 func (client *kafkaClient) producer() error {
 	kafkaProducer, err := kafka.NewProducer(
 		&kafka.ConfigMap{
-			"bootstrap.servers": client.serverUrl,
+			"bootstrap.servers": client.serverURL,
 		},
 	)
 	if err != nil {
@@ -54,6 +59,7 @@ func (client *kafkaClient) producer() error {
 						Value:          getBytes(count, randStringBytes()),
 					},
 					deliveryChan); err != nil {
+					errors = append(errors, fmt.Sprintf("producing message to topic failed with: %v", err))
 				}
 
 				e := <-deliveryChan
@@ -69,7 +75,7 @@ func (client *kafkaClient) producer() error {
 				close(deliveryChan)
 				count++
 			}
-			flushStat := kafkaProducer.Flush(15 * 1000)
+			flushStat := kafkaProducer.Flush(producerFlushTimeout)
 
 			if flushStat != 0 {
 				unDeliveredMessages = append(unDeliveredMessages, flushStat)
@@ -78,7 +84,7 @@ func (client *kafkaClient) producer() error {
 			if count%2 == 0 {
 				time.Sleep(client.delay)
 			} else {
-				time.Sleep(client.delay / 3)
+				time.Sleep(client.delay / randomTimeReduce)
 			}
 		}
 	}()

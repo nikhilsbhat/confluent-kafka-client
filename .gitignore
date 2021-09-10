@@ -1,2 +1,4 @@
 confluent-kafka-client
 .idea
+/vendor
+/dist

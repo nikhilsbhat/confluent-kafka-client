@@ -15,11 +15,3 @@ func Test_getBytes(t *testing.T) {
 		assert.Equal(t, expected, string(actual))
 	})
 }
-
-func Test_randStringBytes(t *testing.T) {
-	t.Run("", func(t *testing.T) {
-		expected := randStringBytes(20)
-		actual := randStringBytes(20)
-		assert.Equal(t, expected, actual)
-	})
-}

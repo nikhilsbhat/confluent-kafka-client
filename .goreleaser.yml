@@ -1,0 +1,52 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+      - darwin
+    ldflags:
+      - -s -w -X github.com/nikhilsbhat/confluent-kafka-client/Version={{.Version}} -X github.com/nikhilsbhat/confluent-kafka-client/Env={{.Env.BUILD_ENVIRONMENT}} -X github.com/nikhilsbhat/confluent-kafka-client/BuildDate={{.Date}} -X github.com/nikhilsbhat/confluent-kafka-client/Revision={{.Commit}} -X github.com/nikhilsbhat/confluent-kafka-client/GoVersion={{.Env.GOVERSION}} -X github.com/nikhilsbhat/confluent-kafka-client/Platform={{ .Os }}/{{ .Arch }}
+
+dockers:
+  - goos: linux
+    goarch: amd64
+    ids:
+      - confluent-kafka-client
+    skip_push: false
+    image_templates:
+      - "basnik/confluent-kafka-client:latest"
+      - "basnik/confluent-kafka-client:{{ .Tag }}"
+      - "basnik/confluent-kafka-client:{{ .Tag }}-{{ .Env.GOVERSION }}"
+    dockerfile: Dockerfile
+
+archives:
+  - format: zip
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      386: i386
+      amd64: x86_64
+    files:
+      - plugin.yaml
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+

@@ -51,6 +51,6 @@ func appVersion(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("renderer version:", string(buildInfo))
+	fmt.Println("confluent-kafka-client version:", string(buildInfo))
 	return nil
 }

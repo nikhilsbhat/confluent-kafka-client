@@ -13,9 +13,15 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	readMessageTimeout             = 100
+	kafkaConsumerSessionTimeout    = 6000
+	kafkaConsumerQueuedMinMessages = 5
+)
+
 func initConsumer(c *cli.Context) error {
 	newKafkaClient := &kafkaClient{
-		serverUrl: c.String(flagServerUrl),
+		serverURL: c.String(flagServerURL),
 		topics:    c.StringSlice(flagTopics),
 		topic:     c.String(flagTopic),
 		offset:    c.String(flagOffset),
@@ -33,17 +39,17 @@ func initConsumer(c *cli.Context) error {
 func (client *kafkaClient) consumer() error {
 	kafkaConsumer, err := kafka.NewConsumer(
 		&kafka.ConfigMap{
-			"bootstrap.servers":     client.serverUrl,
+			"bootstrap.servers":     client.serverURL,
 			"broker.address.family": "v4",
-			"session.timeout.ms":    6000,
-			"queued.min.messages":   5,
+			"session.timeout.ms":    kafkaConsumerSessionTimeout,
+			"queued.min.messages":   kafkaConsumerQueuedMinMessages,
 			"auto.offset.reset":     client.offset,
 			"group.id":              client.groupID,
 		},
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to create consumer: %s\n", err)
+		return fmt.Errorf("failed to create consumer: %s", err)
 	}
 
 	log.Printf("Created Consumer: %v\n", kafkaConsumer)
@@ -57,10 +63,10 @@ func (client *kafkaClient) consumer() error {
 
 	run := true
 	var errors []string
-	for run == true {
+	for run {
 		select {
 		case sig := <-sigchan:
-			log.Printf("Caught signal %v: terminating\n", sig)
+			log.Printf("Caught signal %v: terminating", sig)
 			run = false
 		default:
 
@@ -68,7 +74,7 @@ func (client *kafkaClient) consumer() error {
 				time.Sleep(client.delay)
 			}
 
-			msg, err := kafkaConsumer.ReadMessage(100 * time.Millisecond)
+			msg, err := kafkaConsumer.ReadMessage(readMessageTimeout * time.Millisecond)
 			if err != nil {
 				log.Println(err)
 				continue

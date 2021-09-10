@@ -5,7 +5,7 @@ import (
 )
 
 type kafkaClient struct {
-	serverUrl string
+	serverURL string
 	topic     string
 	topics    []string
 	offset    string
